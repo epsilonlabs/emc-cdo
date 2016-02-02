@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Epsilon Model Connectivity CDO driver (Labs)
+Bundle-SymbolicName: org.eclipse.epsilon.emc.cdo
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: University of York
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Require-Bundle: org.eclipse.epsilon.emc.emf,
+ org.eclipse.emf.cdo,
+ org.eclipse.emf.cdo.net4j,
+ org.eclipse.epsilon.eol.engine
+Export-Package: org.eclipse.epsilon.emc.cdo

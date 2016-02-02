@@ -19,6 +19,9 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
+/**
+ * Configuration dialog for CDO models in the Epsilon run configuration dialogs.
+ */
 public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialog {
 
 	private Text txtURL;

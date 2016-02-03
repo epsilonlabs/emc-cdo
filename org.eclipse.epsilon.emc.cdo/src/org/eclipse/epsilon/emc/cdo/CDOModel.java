@@ -122,10 +122,13 @@ public class CDOModel extends AbstractEmfModel {
 
 		if (cdoTransaction != null) {
 			try {
+				/*
+				 * Note: rolling back produces errors sometimes: if we don't
+				 * store on disposal, we simply close the transaction without
+				 * committing any changes.
+				 */
 				if (isStoredOnDisposal()) {
 					cdoTransaction.commit();
-				} else {
-					cdoTransaction.rollback();
 				}
 			} catch (CommitException e) {
 				e.printStackTrace();

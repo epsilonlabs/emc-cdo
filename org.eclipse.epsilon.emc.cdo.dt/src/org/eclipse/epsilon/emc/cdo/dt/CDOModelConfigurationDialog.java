@@ -15,6 +15,7 @@ import org.eclipse.epsilon.common.dt.launching.dialogs.AbstractModelConfiguratio
 import org.eclipse.epsilon.emc.cdo.CDOModel;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
@@ -30,6 +31,8 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 	private Text txtCDOInitial;
 	private Text txtCDORChunk;
 	private Text txtCDORPrefetch;
+	private Button btnCDOFeatAnalyzer;
+	private Button btnCDODeleteAllIncoming;
 
 	@Override
 	protected String getModelName() {
@@ -45,7 +48,15 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 	protected void createGroups(Composite parent) {
 		super.createGroups(parent);
 		createAccessGroup(parent);
+		createDeletionGroup(parent);
 		createPrefetchGroup(parent);
+		createLoadStoreOptionsGroup(parent);
+	}
+
+	private void createDeletionGroup(Composite parent) {
+		final Composite groupContent = createGroupContainer(parent, "Deletion", 1);
+		btnCDODeleteAllIncoming = new Button(groupContent, SWT.CHECK);
+		btnCDODeleteAllIncoming.setText("Unset all incoming references on deletion (slow)");
 	}
 
 	protected void createPrefetchGroup(Composite parent) {
@@ -68,6 +79,12 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 		txtCDORPrefetch = new Text(groupContent, SWT.BORDER);
 		txtCDORPrefetch.setText("100");
 		txtCDORPrefetch.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+
+		btnCDOFeatAnalyzer = new Button(groupContent, SWT.CHECK);
+		btnCDOFeatAnalyzer.setText("Use CDO model-based feature analyzer");
+		GridData gd = new GridData();
+		gd.horizontalSpan = 2;
+		btnCDOFeatAnalyzer.setLayoutData(gd);
 	}
 
 	protected void createAccessGroup(Composite parent) {
@@ -109,6 +126,8 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 			if (properties.hasProperty(CDOModel.PROPERTY_CDO_REVPREFETCH)) {
 				txtCDORPrefetch.setText((String) properties.get(CDOModel.PROPERTY_CDO_REVPREFETCH));
 			}
+			btnCDOFeatAnalyzer.setSelection(properties.hasProperty(CDOModel.PROPERTY_CDO_FEATANALYZER));
+			btnCDODeleteAllIncoming.setSelection(properties.hasProperty(CDOModel.PROPERTY_CDO_ALLINCOMING_DELETE));
 		}
 	}
 
@@ -122,6 +141,12 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 		properties.put(CDOModel.PROPERTY_CDO_COLLECTION_INITIAL, txtCDOInitial.getText());
 		properties.put(CDOModel.PROPERTY_CDO_COLLECTION_RCHUNK, txtCDORChunk.getText());
 		properties.put(CDOModel.PROPERTY_CDO_REVPREFETCH, txtCDORPrefetch.getText());
+		if (btnCDOFeatAnalyzer.getSelection()) {
+			properties.put(CDOModel.PROPERTY_CDO_FEATANALYZER, "1");
+		}
+		if (btnCDODeleteAllIncoming.getSelection()) {
+			properties.put(CDOModel.PROPERTY_CDO_ALLINCOMING_DELETE, "1");
+		}
 	}
 
 }

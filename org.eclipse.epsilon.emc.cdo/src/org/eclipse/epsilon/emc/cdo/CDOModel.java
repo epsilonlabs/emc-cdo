@@ -12,8 +12,12 @@ package org.eclipse.epsilon.emc.cdo;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import org.eclipse.emf.cdo.CDOObject;
+import org.eclipse.emf.cdo.CDOObjectReference;
 import org.eclipse.emf.cdo.common.protocol.CDOProtocolConstants;
 import org.eclipse.emf.cdo.common.revision.CDORevision;
 import org.eclipse.emf.cdo.eresource.CDOResource;
@@ -25,10 +29,11 @@ import org.eclipse.emf.cdo.util.CDOUtil;
 import org.eclipse.emf.cdo.util.CommitException;
 import org.eclipse.emf.cdo.view.CDOQuery;
 import org.eclipse.emf.cdo.view.CDOView;
+import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EPackage;
-import org.eclipse.emf.ecore.EReference;
+import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.epsilon.common.util.StringProperties;
 import org.eclipse.epsilon.emc.emf.AbstractEmfModel;
@@ -53,13 +58,11 @@ public class CDOModel extends AbstractEmfModel {
 	public static final String PROPERTY_CDO_COLLECTION_RCHUNK = "cdo.collection.rchunk";
 	public static final String PROPERTY_CDO_REVPREFETCH = "cdo.revprefetch";
 	public static final String PROPERTY_CDO_FEATANALYZER = "cdo.featureAnalyzer";
-	public static final String PROPERTY_CDO_ALLINCOMING_DELETE = "cdo.allIncomingDelete";
 
 	private String cdoName, cdoURL, cdoPath;
 	private CDOTransaction cdoTransaction;
 	private int cdoCollectionInitial = 0, cdoCollectionRChunk = 300, cdoRevPrefetching = 100;
 	private boolean useFeatureAnalyzer = false;
-	private boolean deleteAllIncoming = false;
 
 	@Override
 	public void load(StringProperties properties, IRelativePathResolver resolver) throws EolModelLoadingException {
@@ -78,7 +81,6 @@ public class CDOModel extends AbstractEmfModel {
 			this.cdoRevPrefetching = Integer.valueOf(properties.get(PROPERTY_CDO_REVPREFETCH).toString());
 		}
 		this.useFeatureAnalyzer = properties.hasProperty(PROPERTY_CDO_FEATANALYZER);
-		this.deleteAllIncoming = properties.hasProperty(PROPERTY_CDO_ALLINCOMING_DELETE);
 
 		load();
 	}
@@ -159,22 +161,33 @@ public class CDOModel extends AbstractEmfModel {
 	@Override
 	protected boolean deleteElementInModel(Object instance) throws EolRuntimeException {
 		// See https://www.eclipse.org/forums/index.php/t/156816/
-		// ("Delete elements in the model very slowly"). It's faster
-		// to simply remove the object from the containment tree, instead
-		// of checking all incoming references.
-		if (deleteAllIncoming) {
-			return super.deleteElementInModel(instance);
-		} else {
-			final EObject eob = (EObject) instance;
-			final EObject container = eob.eContainer();
-			if (container != null) {
-				final EReference containmentFeature = eob.eContainmentFeature();
-				EcoreUtil.remove(container, containmentFeature, eob);
-				return true;
-			} else {
-				return modelImpl.getContents().remove(eob);
-			}
+		// ("Delete elements in the model very slowly").
+
+		// Fetch the entire subtree to be removed
+		final CDOObject eob = (CDOObject) instance;
+		final Set<CDOObject> toRemove = new HashSet<>();
+		for (TreeIterator<EObject> it = eob.eAllContents(); it.hasNext(); ) {
+			toRemove.add((CDOObject) it.next());
 		}
+
+		// Disconnect the entire subtree
+		List<CDOObjectReference> refs = cdoTransaction.queryXRefs(toRemove);
+		for (CDOObjectReference ref : refs) {
+			final CDOObject src = ref.getSourceObject();
+			final CDOObject target = ref.getTargetObject();
+			final EStructuralFeature feature = ref.getSourceFeature();
+			if (feature.isDerived() || !feature.isChangeable()) {
+				continue;
+			}
+
+			EcoreUtil.remove(src, feature, target);
+		}
+
+		for (CDOObject cdoObject : toRemove) {
+			EcoreUtil.remove(cdoObject);
+		}
+
+		return true;
 	}
 
 	@Override

@@ -32,7 +32,6 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 	private Text txtCDORChunk;
 	private Text txtCDORPrefetch;
 	private Button btnCDOFeatAnalyzer;
-	private Button btnCDODeleteAllIncoming;
 
 	@Override
 	protected String getModelName() {
@@ -48,15 +47,8 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 	protected void createGroups(Composite parent) {
 		super.createGroups(parent);
 		createAccessGroup(parent);
-		createDeletionGroup(parent);
 		createPrefetchGroup(parent);
 		createLoadStoreOptionsGroup(parent);
-	}
-
-	private void createDeletionGroup(Composite parent) {
-		final Composite groupContent = createGroupContainer(parent, "Deletion", 1);
-		btnCDODeleteAllIncoming = new Button(groupContent, SWT.CHECK);
-		btnCDODeleteAllIncoming.setText("Unset all incoming references on deletion (slow)");
 	}
 
 	protected void createPrefetchGroup(Composite parent) {
@@ -127,7 +119,6 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 				txtCDORPrefetch.setText((String) properties.get(CDOModel.PROPERTY_CDO_REVPREFETCH));
 			}
 			btnCDOFeatAnalyzer.setSelection(properties.hasProperty(CDOModel.PROPERTY_CDO_FEATANALYZER));
-			btnCDODeleteAllIncoming.setSelection(properties.hasProperty(CDOModel.PROPERTY_CDO_ALLINCOMING_DELETE));
 		}
 	}
 
@@ -143,9 +134,6 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 		properties.put(CDOModel.PROPERTY_CDO_REVPREFETCH, txtCDORPrefetch.getText());
 		if (btnCDOFeatAnalyzer.getSelection()) {
 			properties.put(CDOModel.PROPERTY_CDO_FEATANALYZER, "1");
-		}
-		if (btnCDODeleteAllIncoming.getSelection()) {
-			properties.put(CDOModel.PROPERTY_CDO_ALLINCOMING_DELETE, "1");
 		}
 	}
 

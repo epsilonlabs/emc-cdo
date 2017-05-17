@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.eclipse.epsilon.emc.cdo;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -228,5 +229,18 @@ public class CDOModel extends AbstractEmfModel {
 
 	protected CDOResource getCDOResource() {
 		return (CDOResource)modelImpl;
+	}
+
+	@Override
+	public boolean store() {
+		if (modelImpl == null) return false;
+
+		try {
+			modelImpl.save(null);
+			return true;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 }

@@ -150,7 +150,7 @@ public class CDOModel extends AbstractEmfModel {
 				pkg = ((EPackage.Descriptor)pkg).getEPackage();
 			}
 			if (pkg instanceof EPackage) {
-				EClass eClass = classForName(name, absolute, pkg);
+				EClass eClass = classForName(name, absolute, (EPackage) pkg);
 				if (eClass != null) {
 					return eClass;
 				}

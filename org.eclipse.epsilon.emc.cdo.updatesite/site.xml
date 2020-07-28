@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/org.eclipse.epsilon.emc.cdo.dt.feature_1.0.0.201603312100.jar" id="org.eclipse.epsilon.emc.cdo.dt.feature" version="1.0.0.201603312100">
+   <feature url="features/org.eclipse.epsilon.emc.cdo.dt.feature_1.0.0.202007281221.jar" id="org.eclipse.epsilon.emc.cdo.dt.feature" version="1.0.0.202007281221">
       <category name="org.eclipse.epsilon.emc.cdo"/>
    </feature>
-   <feature url="features/org.eclipse.epsilon.emc.cdo.feature_1.0.0.201603312100.jar" id="org.eclipse.epsilon.emc.cdo.feature" version="1.0.0.201603312100">
+   <feature url="features/org.eclipse.epsilon.emc.cdo.feature_1.0.0.202007281221.jar" id="org.eclipse.epsilon.emc.cdo.feature" version="1.0.0.202007281221">
       <category name="org.eclipse.epsilon.emc.cdo"/>
    </feature>
    <category-def name="org.eclipse.epsilon.emc.cdo" label="CDO Driver"/>

@@ -24,10 +24,8 @@ You should obtain this output:
 Now there are these many instances: 1
 ```
 
-Please keep in mind that the EMC CDO driver will first check the CDO package registry for the `Tree` type, and if it does not find it, it will fall back to your global package registry (`EPackage.Registry.INSTANCE`).
-On the first execution of the query, it caused CDO to automatically register `Tree` into the CDO package registry when the transaction was committed upon saving the model.
+The EMC CDO driver will first check the CDO package registry for the `Tree` type, and since it won't be there yet, it will fall back to your global package registry (`EPackage.Registry.INSTANCE`).
+On the first execution of the query, CDO will automatically register the `Tree` metamodel into the CDO package registry when the transaction was committed upon saving the model.
 
 If you re-run the query, you will see the number of instances increasing by 1 each time.
 These later runs will use the version of `Tree` that has already been registered into CDO.
-
-

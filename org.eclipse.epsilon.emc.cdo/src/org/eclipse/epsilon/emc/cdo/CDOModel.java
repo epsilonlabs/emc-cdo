@@ -176,7 +176,7 @@ public class CDOModel extends AbstractEmfModel {
 		for (CDOObjectReference ref : refs) {
 			final CDOObject src = ref.getSourceObject();
 			final CDOObject target = ref.getTargetObject();
-			final EStructuralFeature feature = ref.getSourceFeature();
+			final EStructuralFeature feature = ref.getSourceReference();
 			if (feature.isDerived() || !feature.isChangeable()) {
 				continue;
 			}

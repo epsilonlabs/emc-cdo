@@ -145,6 +145,7 @@ public class CDOModel extends AbstractEmfModel {
 	public EClass classForName(String name) throws EolModelElementTypeNotFoundException {
 		boolean absolute = name.indexOf("::") > -1;
 
+		// Look first in the CDO package registry
 		for (Object pkg : registry.values()) {
 			if (pkg instanceof EPackage.Descriptor) {
 				pkg = ((EPackage.Descriptor)pkg).getEPackage();
@@ -156,7 +157,13 @@ public class CDOModel extends AbstractEmfModel {
 				}
 			}
 		}
-		return null;
+
+		/*
+		 * Piggyback on the global registry - this may cause automated
+		 * EPackage registration if we're using a local type that's not
+		 * registered in CDO yet.
+		 */
+		return super.classForName(name, EPackage.Registry.INSTANCE);
 	}
 
 	@Override

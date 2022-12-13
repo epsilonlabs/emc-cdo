@@ -2,7 +2,7 @@
 <feature
       id="org.eclipse.epsilon.emc.cdo.dt.feature"
       label="Epsilon EMC CDO Driver Developer Tools Feature"
-      version="1.0.0.qualifier">
+      version="1.0.1.qualifier">
 
    <description url="http://www.example.com/description">
       [Enter Feature Description here.]

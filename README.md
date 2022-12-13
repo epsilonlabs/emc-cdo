@@ -11,4 +11,4 @@ http://epsilonlabs.github.io/emc-cdo/updates/
 
 You should be able to use a new "CDO Model" model type within your E*L launch configurations. You may need to check the "Show all model types" checkbox in order to see it, though. The model type will ask for the connection URL to the CDO repository, which is the same one used in the "CDO Repositories" view.
 
-This resource takes advantage of remote CDO queries to speed up `X.allInstances`, uses the remote EPackage registry instead of the local one, and attempts to optimize deletion by using the CDO queryXRefs method (instead of the naive iteration through the whole resource that ECoreUtil#delete does).
+This resource takes advantage of remote CDO queries to speed up `X.allInstances`, prioritizes the remote EPackage registry over the local global registry, and speeds up deletion by using the CDO queryXRefs method (instead of the naive iteration through the whole resource that ECoreUtil#delete does).

@@ -15,7 +15,7 @@ To create it, follow these steps:
 You will also need to register the sample `Tree.ecore` metamodel in your global registry.
 Right-click on the `Tree.ecore` file in this folder, and select "Register EPackages".
 
-## Running the query
+## Running the query
 
 You can now run the sample query by right-clicking `populateTree.launch` in the Project Explorer, and selecting `Run as - populateTree`.
 You should obtain this output:

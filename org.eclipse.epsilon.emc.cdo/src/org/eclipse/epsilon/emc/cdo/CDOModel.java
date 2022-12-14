@@ -29,7 +29,7 @@ import org.eclipse.emf.cdo.net4j.CDONet4jSessionConfiguration;
 import org.eclipse.emf.cdo.net4j.CDONet4jUtil;
 import org.eclipse.emf.cdo.transaction.CDOTransaction;
 import org.eclipse.emf.cdo.util.CDOUtil;
-import org.eclipse.emf.cdo.util.CommitException;
+import org.eclipse.emf.cdo.util.InvalidURIException;
 import org.eclipse.emf.cdo.view.CDOQuery;
 import org.eclipse.emf.cdo.view.CDOView;
 import org.eclipse.emf.common.util.TreeIterator;
@@ -63,18 +63,20 @@ public class CDOModel extends AbstractEmfModel {
 	public static final String PROPERTY_CDO_REVPREFETCH = "cdo.revprefetch";
 	public static final String PROPERTY_CDO_FEATANALYZER = "cdo.featureAnalyzer";
 
-	private String cdoName, cdoURL, cdoPath, cdoBranch;
-	private CDOTransaction cdoTransaction;
+	public static final String PROPERTY_CDO_CREATE_MISSING = "cdo.createMissingResource";
+
+	private String repositoryName, serverURL, modelPath, branchName;
 	private int cdoCollectionInitial = 0, cdoCollectionRChunk = 300, cdoRevPrefetching = 100;
-	private boolean useFeatureAnalyzer = false;
+	private CDOTransaction cdoTransaction;
+	private boolean useFeatureAnalyzer = false, createMissingResource = false;
 
 	@Override
 	public void load(StringProperties properties, IRelativePathResolver resolver) throws EolModelLoadingException {
 		super.load(properties, resolver);
-		this.cdoURL = (String) properties.get(PROPERTY_CDO_URL);
-		this.cdoName = (String) properties.get(PROPERTY_CDO_NAME);
-		this.cdoPath = (String) properties.get(PROPERTY_CDO_PATH);
-		this.cdoBranch = (String) properties.getProperty(PROPERTY_CDO_BRANCH);
+		this.serverURL = (String) properties.get(PROPERTY_CDO_URL);
+		this.repositoryName = (String) properties.get(PROPERTY_CDO_NAME);
+		this.modelPath = (String) properties.get(PROPERTY_CDO_PATH);
+		this.branchName = (String) properties.getProperty(PROPERTY_CDO_BRANCH);
 
 		if (properties.hasProperty(PROPERTY_CDO_COLLECTION_INITIAL)) {
 			this.cdoCollectionInitial = Integer.valueOf(properties.get(PROPERTY_CDO_COLLECTION_INITIAL).toString());
@@ -86,6 +88,7 @@ public class CDOModel extends AbstractEmfModel {
 			this.cdoRevPrefetching = Integer.valueOf(properties.get(PROPERTY_CDO_REVPREFETCH).toString());
 		}
 		this.useFeatureAnalyzer = properties.hasProperty(PROPERTY_CDO_FEATANALYZER);
+		this.createMissingResource = properties.hasProperty(PROPERTY_CDO_CREATE_MISSING);
 
 		load();
 	}
@@ -93,10 +96,10 @@ public class CDOModel extends AbstractEmfModel {
 	@Override
 	protected void loadModel() throws EolModelLoadingException {
 		try {
-			final IConnector connector = Net4jUtil.getConnector(IPluginContainer.INSTANCE, cdoURL);
+			final IConnector connector = Net4jUtil.getConnector(IPluginContainer.INSTANCE, serverURL);
 			final CDONet4jSessionConfiguration sessionConfig = CDONet4jUtil.createNet4jSessionConfiguration();
 			sessionConfig.setConnector(connector);
-			sessionConfig.setRepositoryName(cdoName);
+			sessionConfig.setRepositoryName(repositoryName);
 
 			// tests with singleton query don't reveal benefits with CDO feature analyzers
 			if (useFeatureAnalyzer) {
@@ -109,22 +112,32 @@ public class CDOModel extends AbstractEmfModel {
 			cdoSession.options().setCollectionLoadingPolicy(CDOUtil.createCollectionLoadingPolicy(cdoCollectionInitial, cdoCollectionRChunk));
 
 			CDOBranch branch = cdoSession.getBranchManager().getMainBranch();
-			if (cdoBranch != null && !"".equals(cdoBranch.trim())) {
-				branch = cdoSession.getBranchManager().getBranch(cdoBranch);
+			if (branchName != null && !"".equals(branchName.trim())) {
+				branch = cdoSession.getBranchManager().getBranch(branchName);
 				if (branch == null) {
-					StringBuilder sb = new StringBuilder(String.format("Branch '%s' does not exist. Available branches:", cdoBranch));
+					StringBuilder sb = new StringBuilder(String.format("Branch '%s' does not exist. Available branches:", branchName));
 					appendBranches(cdoSession.getBranchManager().getMainBranch(), sb);
 					throw new NoSuchElementException(sb.toString());
 				}
 			}
-			final CDOTransaction cdoTransaction = cdoSession.openTransaction(branch);
+			cdoTransaction = cdoSession.openTransaction(branch);
 
 			cdoTransaction.options().setRevisionPrefetchingPolicy(CDOUtil.createRevisionPrefetchingPolicy(cdoRevPrefetching));
 			if (useFeatureAnalyzer) {
 				cdoTransaction.options().setFeatureAnalyzer(CDOUtil.createModelBasedFeatureAnalyzer());
 			}
 
-			modelImpl = cdoTransaction.getResource(cdoPath);
+			try {
+				modelImpl = cdoTransaction.getResource(modelPath);
+			} catch (InvalidURIException ex) {
+				if (createMissingResource) {
+					modelImpl = cdoTransaction.createResource(modelPath);
+				} else {
+					throw new NoSuchElementException(String.format(
+						"No resource exists with path %s, and automated resource creation was disabled", modelPath));
+				}
+			}
+
 			registry = cdoTransaction.getSession().getPackageRegistry();
 		} catch (Exception ex) {
 			throw new EolModelLoadingException(ex, this);
@@ -138,25 +151,54 @@ public class CDOModel extends AbstractEmfModel {
 		}
 	}
 
+	public String getRepositoryName() {
+		return repositoryName;
+	}
+
+	public void setRepositoryName(String repositoryName) {
+		this.repositoryName = repositoryName;
+	}
+
+	public String getServerURL() {
+		return serverURL;
+	}
+
+	public void setServerURL(String serverURL) {
+		this.serverURL = serverURL;
+	}
+
+	public String getModelPath() {
+		return modelPath;
+	}
+
+	public void setModelPath(String modelPath) {
+		this.modelPath = modelPath;
+	}
+
+	public String getBranchName() {
+		return branchName;
+	}
+
+	public void setBranchName(String branchName) {
+		this.branchName = branchName;
+	}
+
+	public boolean isCreateMissingResource() {
+		return createMissingResource;
+	}
+
+	public void setCreateMissingResource(boolean createMissingResource) {
+		this.createMissingResource = createMissingResource;
+	}
+
 	@Override
 	public void disposeModel() {
 		super.disposeModel();
 
 		if (cdoTransaction != null) {
-			try {
-				/*
-				 * Note: rolling back produces errors sometimes: if we don't
-				 * store on disposal, we simply close the transaction without
-				 * committing any changes.
-				 */
-				if (isStoredOnDisposal()) {
-					cdoTransaction.commit();
-				}
-			} catch (CommitException e) {
-				e.printStackTrace();
-			}
 			cdoTransaction.close();
 			cdoTransaction.getSession().close();
+			cdoTransaction = null;
 		}
 	}
 
@@ -249,7 +291,9 @@ public class CDOModel extends AbstractEmfModel {
 
 	@Override
 	protected Collection<EObject> allContentsFromModel() {
-		getCDOResource().cdoPrefetch(CDORevision.DEPTH_INFINITE);
+		if (getCDOResource().isExisting()) {
+			getCDOResource().cdoPrefetch(CDORevision.DEPTH_INFINITE);
+		}
 		return super.allContentsFromModel();
 	}
 

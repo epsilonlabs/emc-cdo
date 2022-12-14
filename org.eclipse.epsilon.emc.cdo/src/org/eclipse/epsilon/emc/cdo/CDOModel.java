@@ -15,10 +15,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.eclipse.emf.cdo.CDOObject;
 import org.eclipse.emf.cdo.CDOObjectReference;
+import org.eclipse.emf.cdo.common.branch.CDOBranch;
 import org.eclipse.emf.cdo.common.protocol.CDOProtocolConstants;
 import org.eclipse.emf.cdo.common.revision.CDORevision;
 import org.eclipse.emf.cdo.eresource.CDOResource;
@@ -54,13 +56,14 @@ public class CDOModel extends AbstractEmfModel {
 	public static final String PROPERTY_CDO_URL = "cdo.url";
 	public static final String PROPERTY_CDO_NAME = "cdo.repo";
 	public static final String PROPERTY_CDO_PATH = "cdo.path";
+	public static final String PROPERTY_CDO_BRANCH = "cdo.branch";
 
 	public static final String PROPERTY_CDO_COLLECTION_INITIAL = "cdo.collection.initial";
 	public static final String PROPERTY_CDO_COLLECTION_RCHUNK = "cdo.collection.rchunk";
 	public static final String PROPERTY_CDO_REVPREFETCH = "cdo.revprefetch";
 	public static final String PROPERTY_CDO_FEATANALYZER = "cdo.featureAnalyzer";
 
-	private String cdoName, cdoURL, cdoPath;
+	private String cdoName, cdoURL, cdoPath, cdoBranch;
 	private CDOTransaction cdoTransaction;
 	private int cdoCollectionInitial = 0, cdoCollectionRChunk = 300, cdoRevPrefetching = 100;
 	private boolean useFeatureAnalyzer = false;
@@ -71,6 +74,7 @@ public class CDOModel extends AbstractEmfModel {
 		this.cdoURL = (String) properties.get(PROPERTY_CDO_URL);
 		this.cdoName = (String) properties.get(PROPERTY_CDO_NAME);
 		this.cdoPath = (String) properties.get(PROPERTY_CDO_PATH);
+		this.cdoBranch = (String) properties.getProperty(PROPERTY_CDO_BRANCH);
 
 		if (properties.hasProperty(PROPERTY_CDO_COLLECTION_INITIAL)) {
 			this.cdoCollectionInitial = Integer.valueOf(properties.get(PROPERTY_CDO_COLLECTION_INITIAL).toString());
@@ -99,14 +103,22 @@ public class CDOModel extends AbstractEmfModel {
 				sessionConfig.setFetchRuleManager(CDOUtil.createThreadLocalFetchRuleManager());
 			}
 
-			// This would need a custom server - default one cannot be configured
-			// to use gzip compression, as far as I can see.
-			//sessionConfig.setStreamWrapper(new GZIPStreamWrapper());
 			final CDONet4jSession cdoSession = sessionConfig.openNet4jSession();
 			
 			// Some tweaks were taken from https://wiki.eclipse.org/CDO/Tweaking_Performance
 			cdoSession.options().setCollectionLoadingPolicy(CDOUtil.createCollectionLoadingPolicy(cdoCollectionInitial, cdoCollectionRChunk));
-			cdoTransaction = cdoSession.openTransaction();
+
+			CDOBranch branch = cdoSession.getBranchManager().getMainBranch();
+			if (cdoBranch != null && !"".equals(cdoBranch.trim())) {
+				branch = cdoSession.getBranchManager().getBranch(cdoBranch);
+				if (branch == null) {
+					StringBuilder sb = new StringBuilder(String.format("Branch '%s' does not exist. Available branches:", cdoBranch));
+					appendBranches(cdoSession.getBranchManager().getMainBranch(), sb);
+					throw new NoSuchElementException(sb.toString());
+				}
+			}
+			final CDOTransaction cdoTransaction = cdoSession.openTransaction(branch);
+
 			cdoTransaction.options().setRevisionPrefetchingPolicy(CDOUtil.createRevisionPrefetchingPolicy(cdoRevPrefetching));
 			if (useFeatureAnalyzer) {
 				cdoTransaction.options().setFeatureAnalyzer(CDOUtil.createModelBasedFeatureAnalyzer());
@@ -116,6 +128,13 @@ public class CDOModel extends AbstractEmfModel {
 			registry = cdoTransaction.getSession().getPackageRegistry();
 		} catch (Exception ex) {
 			throw new EolModelLoadingException(ex, this);
+		}
+	}
+
+	private void appendBranches(CDOBranch mainBranch, StringBuilder sb) {
+		sb.append(String.format("\n- %s", mainBranch.getPathName()));
+		for (CDOBranch branch : mainBranch.getBranches()) {
+			appendBranches(branch, sb);
 		}
 	}
 

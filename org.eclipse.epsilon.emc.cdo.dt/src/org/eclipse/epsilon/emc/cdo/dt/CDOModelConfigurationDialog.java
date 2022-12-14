@@ -28,6 +28,7 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 	private Text txtURL;
 	private Text txtName;
 	private Text txtPath;
+	private Text txtBranch;
 	private Text txtCDOInitial;
 	private Text txtCDORChunk;
 	private Text txtCDORPrefetch;
@@ -99,6 +100,12 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 		txtPath = new Text(groupContent, SWT.BORDER);
 		txtPath.setText("/input.xmi");
 		txtPath.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+
+		final Label lblBranch = new Label(groupContent, SWT.NONE);
+		lblBranch.setText("Branch:");
+		txtBranch = new Text(groupContent, SWT.BORDER);
+		txtBranch.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		txtBranch.setToolTipText("Path to the branch (e.g. MAIN/branch1). Leave empty to use the main branch.");
 	}
 
 	@Override
@@ -108,6 +115,9 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 			txtURL.setText((String) properties.get(CDOModel.PROPERTY_CDO_URL));
 			txtName.setText((String) properties.get(CDOModel.PROPERTY_CDO_NAME));
 			txtPath.setText((String) properties.get(CDOModel.PROPERTY_CDO_PATH));
+			if (properties.hasProperty(CDOModel.PROPERTY_CDO_BRANCH)) {
+				txtBranch.setText((String) properties.get(CDOModel.PROPERTY_CDO_BRANCH));
+			}
 
 			if (properties.hasProperty(CDOModel.PROPERTY_CDO_COLLECTION_INITIAL)) {
 				txtCDOInitial.setText((String) properties.get(CDOModel.PROPERTY_CDO_COLLECTION_INITIAL));
@@ -129,6 +139,7 @@ public class CDOModelConfigurationDialog extends AbstractModelConfigurationDialo
 		properties.put(CDOModel.PROPERTY_CDO_URL, txtURL.getText());
 		properties.put(CDOModel.PROPERTY_CDO_NAME, txtName.getText());
 		properties.put(CDOModel.PROPERTY_CDO_PATH, txtPath.getText());
+		properties.put(CDOModel.PROPERTY_CDO_BRANCH, txtBranch.getText());
 		properties.put(CDOModel.PROPERTY_CDO_COLLECTION_INITIAL, txtCDOInitial.getText());
 		properties.put(CDOModel.PROPERTY_CDO_COLLECTION_RCHUNK, txtCDORChunk.getText());
 		properties.put(CDOModel.PROPERTY_CDO_REVPREFETCH, txtCDORPrefetch.getText());

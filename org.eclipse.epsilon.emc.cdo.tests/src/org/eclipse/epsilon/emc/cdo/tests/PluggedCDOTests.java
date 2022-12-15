@@ -3,6 +3,7 @@ package org.eclipse.epsilon.emc.cdo.tests;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
@@ -22,6 +23,7 @@ import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.epsilon.emc.cdo.CDOModel;
 import org.eclipse.epsilon.emc.emf.EmfUtil;
 import org.eclipse.epsilon.eol.EolModule;
+import org.eclipse.epsilon.eol.exceptions.EolTypeNotFoundException;
 import org.eclipse.epsilon.eol.exceptions.models.EolModelElementTypeNotFoundException;
 import org.eclipse.epsilon.eol.exceptions.models.EolModelLoadingException;
 import org.eclipse.net4j.jvm.IJVMAcceptor;
@@ -96,6 +98,17 @@ public class PluggedCDOTests {
 	}
 
 	@Test
+	public void createMissingType() throws Exception {
+		try (CDOModel model = createModel("/tree")) {
+			model.setCreateMissingResource(true);
+			model.load();
+
+			assertThrows(EolTypeNotFoundException.class,
+				() -> model.createInstance("DoNotExist"));
+		}
+	}
+
+	@Test
 	public void missingBranch() throws Exception {
 		try (CDOModel model = createModel("/tree")) {
 			model.setStoredOnDisposal(false);
@@ -161,7 +174,6 @@ public class PluggedCDOTests {
 			model.load();
 
 			EObject leaf = (EObject) eol(model, "var root = new Tree; var child = new Tree; root.children.add(child); return child;");
-			System.out.println("LEAF: " + leaf.getClass() + ", from " + leaf.getClass().getClassLoader());
 			assertNotNull("The EOL script should have returned the leaf node", leaf);
 
 			assertCountOfKind("The model should have the root and leaf Tree objects before deleting the leaf", 2, model, "Tree");
@@ -179,7 +191,6 @@ public class PluggedCDOTests {
 			model.load();
 
 			EObject root = (EObject) eol(model, "var root = new Tree; var child = new Tree; root.children.add(child); return root;");
-			System.out.println("ROOT: " + root.getClass() + ", from " + root.getClass().getClassLoader());
 			assertNotNull("The EOL script should have returned the root node", root);
 
 			assertCountOfKind("The model should have the root and leaf Tree objects before deleting the root", 2, model, "Tree");
@@ -189,13 +200,46 @@ public class PluggedCDOTests {
 	}
 
 	@Test
-	public void isType() {
-		// This one needs a metamodel with some inheritance
-		fail("Not done yet");
+	public void deleteWithXRef() throws Exception {
+		registerMetamodel("metamodels/XRef.ecore");
+		try (CDOModel model = createModel("/xref")) {
+			model.setStoredOnDisposal(true);
+			model.setCreateMissingResource(true);
+			model.load();
+
+			EObject second = (EObject) eol(model,
+				"var first = new Element; var second = new Element; "
+				+ "first.ref = second; return second;");
+			model.deleteElement(second);
+			assertTrue("The reference from the first Element should have been unset",
+				(boolean) eol(model, "return Element.all.first.ref == null;"));
+		}
+	}
+
+	@Test
+	public void isType() throws Exception {
+		registerMetamodel("metamodels/Zoo.ecore");
+
+		try (CDOModel model = createModel("/animals")) {
+			model.setStoredOnDisposal(true);
+			model.setCreateMissingResource(true);
+			model.load();
+			model.createInstance("Panda");
+
+			assertCountOfKind("The model should have 1 Panda", 1, model, "Panda");
+			assertCountOfType("The model should have 1 exact Panda", 0, model, "Panda");
+
+			assertCountOfKind("The model should have 1 Animal", 1, model, "Animal");
+			assertCountOfType("The model should have 0 exact Animals", 0, model, "Animal");
+		}
 	}
 
 	private void assertCountOfKind(String message, int count, CDOModel model, String kind) throws EolModelElementTypeNotFoundException {
 		assertEquals(message, count, model.getAllOfKind(kind).size());
+	}
+
+	private void assertCountOfType(String message, int count, CDOModel model, String kind) throws EolModelElementTypeNotFoundException {
+		assertEquals(message, count, model.getAllOfType(kind).size());
 	}
 
 	private void createBranch(String branchName) {
@@ -232,7 +276,11 @@ public class PluggedCDOTests {
 	}
 
 	private void registerTreeMetamodel() throws IOException {
-		Resource r = EmfUtil.createResource(URI.createFileURI(new File("metamodels/Tree.ecore").getCanonicalPath()));
+		registerMetamodel("metamodels/Tree.ecore");
+	}
+
+	private void registerMetamodel(String metamodelPath) throws IOException {
+		Resource r = EmfUtil.createResource(URI.createFileURI(new File(metamodelPath).getCanonicalPath()));
 		r.load(null);
 		EPackage pkg = (EPackage) r.getContents().get(0);
 		EPackage.Registry.INSTANCE.put(pkg.getNsURI(), pkg);

@@ -288,8 +288,8 @@ public class CDOModel extends AbstractEmfModel {
 
 		final CDOView cdoView = getCDOResource().cdoView();
 		final CDOQuery query = cdoView.createQuery(CDOProtocolConstants.QUERY_LANGUAGE_INSTANCES, null);
-		query.getParameters().put(CDOProtocolConstants.QUERY_LANGUAGE_INSTANCES_TYPE, eClass);
-		query.getParameters().put(CDOProtocolConstants.QUERY_LANGUAGE_INSTANCES_EXACT, true);
+		query.setParameter(CDOProtocolConstants.QUERY_LANGUAGE_INSTANCES_TYPE, eClass);
+		query.setParameter(CDOProtocolConstants.QUERY_LANGUAGE_INSTANCES_EXACT, true);
 		final List<EObject> allInstances = query.getResult();
 
 		return filterByResource(allInstances);

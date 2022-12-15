@@ -21,6 +21,8 @@ import java.util.Set;
 import org.eclipse.emf.cdo.CDOObject;
 import org.eclipse.emf.cdo.CDOObjectReference;
 import org.eclipse.emf.cdo.common.branch.CDOBranch;
+import org.eclipse.emf.cdo.common.model.CDOPackageRegistry;
+import org.eclipse.emf.cdo.common.model.CDOPackageRegistryPopulator;
 import org.eclipse.emf.cdo.common.protocol.CDOProtocolConstants;
 import org.eclipse.emf.cdo.common.revision.CDORevision;
 import org.eclipse.emf.cdo.eresource.CDOResource;
@@ -37,6 +39,7 @@ import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.emf.ecore.impl.EPackageRegistryImpl;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.epsilon.common.util.StringProperties;
 import org.eclipse.epsilon.emc.emf.AbstractEmfModel;
@@ -203,12 +206,12 @@ public class CDOModel extends AbstractEmfModel {
 	}
 
 	@Override
-	public EClass classForName(String name) throws EolModelElementTypeNotFoundException {
+	protected EClass classForName(String name, EPackage.Registry registry) {
 		boolean absolute = name.indexOf("::") > -1;
 
-		// Look first in the CDO package registry
 		for (Object pkg : registry.values()) {
 			if (pkg instanceof EPackage.Descriptor) {
+				// CDO often uses package descriptors in place of real packages
 				pkg = ((EPackage.Descriptor)pkg).getEPackage();
 			}
 			if (pkg instanceof EPackage) {
@@ -219,12 +222,31 @@ public class CDOModel extends AbstractEmfModel {
 			}
 		}
 
-		/*
-		 * Piggyback on the global registry - this may cause automated
-		 * EPackage registration if we're using a local type that's not
-		 * registered in CDO yet.
-		 */
-		return super.classForName(name, EPackage.Registry.INSTANCE);
+		// Not in this registry? Is this the CDO registry?
+		if (registry instanceof CDOPackageRegistry && registry != EPackage.Registry.INSTANCE) {
+			/* 
+			 * Try to populate the CDO registry from the client's global registry.
+			 *
+			 * We do this eager type registration in order to avoid a nasty side-effect
+			 * of postponing metamodel registration in CDO, where the very first newly
+			 * created instance may just be a DynamicEObjectImpl (as it was created from
+			 * the client's local EPackage, not CDO's version of it), and will not cast
+			 * down into a CDOObject.
+			 */
+			EClass localEClass = super.classForName(name, EPackage.Registry.INSTANCE);
+			if (localEClass != null) {
+				final String nsURI = localEClass.getEPackage().getNsURI();
+
+				EPackage.Registry temporaryRegistry = new EPackageRegistryImpl();
+				temporaryRegistry.put(nsURI, localEClass.getEPackage());
+				CDOPackageRegistryPopulator.populate(temporaryRegistry, (CDOPackageRegistry) registry);
+
+				EPackage populatedPackage = registry.getEPackage(nsURI);
+				return classForName(name, absolute, populatedPackage);
+			}
+		}
+
+		return null;
 	}
 
 	@Override
@@ -235,6 +257,7 @@ public class CDOModel extends AbstractEmfModel {
 		// Fetch the entire subtree to be removed
 		final CDOObject eob = (CDOObject) instance;
 		final Set<CDOObject> toRemove = new HashSet<>();
+		toRemove.add(eob);
 		for (TreeIterator<EObject> it = eob.eAllContents(); it.hasNext(); ) {
 			toRemove.add((CDOObject) it.next());
 		}

@@ -1,3 +1,5 @@
+*NOTE:* this repository is now archived, as the CDO driver has moved into the main Epsilon repository from 2.5.0 onwards.
+
 EMC driver for CDO models
 ===
 
